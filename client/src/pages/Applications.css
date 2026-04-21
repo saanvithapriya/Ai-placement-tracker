@@ -1,0 +1,206 @@
+.app-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  display: flex;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.view-btn {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: var(--font-base);
+  transition: all var(--transition);
+}
+
+.view-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* ── Kanban ─────────────────────────── */
+.kanban-board {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+
+.kanban-column {
+  min-width: 240px;
+  max-width: 280px;
+  flex: 1;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kanban-col-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.kanban-col--applied .kanban-col-title   { color: var(--status-applied); }
+.kanban-col--shortlisted .kanban-col-title { color: var(--status-shortlisted); }
+.kanban-col--interview .kanban-col-title { color: var(--status-interview); }
+.kanban-col--offer .kanban-col-title     { color: var(--status-offer); }
+.kanban-col--rejected .kanban-col-title  { color: var(--status-rejected); }
+
+.kanban-count {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kanban-cards {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.kanban-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 20px;
+}
+
+.kanban-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.kanban-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.kcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.kcard-company-logo {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem; color: white;
+}
+
+.kcard-star {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+.kcard-star:hover, .kcard-star.starred { color: var(--accent); }
+
+.kcard-company { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+.kcard-role    { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px; }
+
+.kcard-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.kcard-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+}
+
+.kcard-actions { display: flex; gap: 6px; align-items: center; }
+
+.kcard-status-select {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  font-family: var(--font-base);
+}
+
+/* ── List Table ──────────────────────── */
+.app-list-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.app-list-table table { width: 100%; border-collapse: collapse; }
+
+.app-list-table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-list-table td {
+  padding: 14px 16px;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.app-list-table tr:last-child td { border-bottom: none; }
+.app-list-table tr:hover td { background: var(--bg-elevated); }
+
+.table-empty { text-align: center; color: var(--text-muted); padding: 40px !important; }
+
+.table-company { display: flex; align-items: center; gap: 10px; }
+.table-company-logo {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem; color: white; flex-shrink: 0;
+}
+.table-company-name { font-weight: 600; font-size: 0.875rem; }
+.table-company-loc  { font-size: 0.75rem; color: var(--text-muted); }

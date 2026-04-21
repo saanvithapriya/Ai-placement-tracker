@@ -1,0 +1,127 @@
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-base);
+}
+
+.admin-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+.admin-tab.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+/* Top Companies */
+.top-companies { display: flex; flex-direction: column; gap: 0; }
+
+.top-company-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.top-company-row:last-child { border-bottom: none; }
+
+.tc-rank { font-size: 0.8rem; color: var(--text-muted); width: 28px; font-weight: 700; }
+
+.tc-logo {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; font-size: 0.875rem;
+}
+
+.tc-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+.tc-offers {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(16,185,129,0.12);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+/* Admin Table */
+.admin-table { width: 100%; border-collapse: collapse; }
+
+.admin-table th {
+  text-align: left;
+  padding: 14px 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table td {
+  padding: 14px 20px;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: rgba(99,102,241,0.04); }
+
+.admin-student-cell { display: flex; align-items: center; gap: 12px; }
+.admin-student-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; font-size: 0.875rem;
+}
+.admin-student-name  { font-weight: 600; font-size: 0.875rem; }
+.admin-student-email { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Companies Grid */
+.companies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.company-card { }
+
+.company-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.company-card-logo {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.1rem; color: white;
+}
+
+.company-card-name     { font-size: 1.05rem; font-weight: 700; margin-bottom: 2px; }
+.company-card-industry { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; }
+.company-card-package  { font-size: 0.85rem; color: var(--success); margin-bottom: 6px; font-weight: 600; }
+.company-card-date     { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; }
+.company-card-roles    { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
+.company-card-actions  { display: flex; gap: 8px; }

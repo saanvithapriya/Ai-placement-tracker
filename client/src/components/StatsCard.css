@@ -1,0 +1,87 @@
+.stats-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.3s ease;
+  animation: fadeUp 0.5s ease forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.stats-card--primary::before  { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
+.stats-card--success::before  { background: linear-gradient(90deg, var(--success), #34d399); }
+.stats-card--warning::before  { background: linear-gradient(90deg, var(--warning), #fbbf24); }
+.stats-card--danger::before   { background: linear-gradient(90deg, var(--danger), #f87171); }
+.stats-card--secondary::before { background: linear-gradient(90deg, var(--secondary), var(--secondary-light)); }
+.stats-card--purple::before   { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+.stats-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.stats-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.stats-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.stats-icon--primary   { background: rgba(99, 102, 241, 0.15); }
+.stats-icon--success   { background: rgba(16, 185, 129, 0.15); }
+.stats-icon--warning   { background: rgba(245, 158, 11, 0.15); }
+.stats-icon--danger    { background: rgba(239, 68, 68, 0.15); }
+.stats-icon--secondary { background: rgba(6, 182, 212, 0.15); }
+.stats-icon--purple    { background: rgba(139, 92, 246, 0.15); }
+
+.stats-card-trend {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+}
+.trend-up   { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.trend-down { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+.stats-card-value {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stats-card-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.stats-card-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
