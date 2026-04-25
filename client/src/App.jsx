@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import Applications from './pages/Applications';
+import SkillTracker from './pages/SkillTracker';
 import AIAssistant from './pages/AIAssistant';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
@@ -61,6 +62,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout><Applications /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/skills"
+        element={
+          <ProtectedRoute>
+            <AppLayout><SkillTracker /></AppLayout>
           </ProtectedRoute>
         }
       />

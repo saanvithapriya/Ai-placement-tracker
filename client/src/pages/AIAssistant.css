@@ -231,5 +231,3 @@
 .chat-input-row { display: flex; gap: 10px; }
 .chat-input-row .form-input { flex: 1; }
 
-/* AI Orb in header */
-.ai-orb-header { width: 100px; height: 100px; flex-shrink: 0; }

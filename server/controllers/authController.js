@@ -1,4 +1,3 @@
-const asyncHandler = require('express-async-handler');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -7,18 +6,16 @@ const generateToken = (id) =>
 
 // @desc    Register user
 // @route   POST /api/auth/register
-const register = asyncHandler(async (req, res) => {
+const register = async (req, res) => {
   const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
-    res.status(400);
-    throw new Error('Please provide name, email, and password');
+    return res.status(400).json({ success: false, message: 'Please provide name, email, and password' });
   }
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    res.status(400);
-    throw new Error('Email already registered');
+    return res.status(400).json({ success: false, message: 'Email already registered' });
   }
 
   const user = await User.create({ name, email, password, role: role === 'admin' ? 'admin' : 'student' });
@@ -34,22 +31,20 @@ const register = asyncHandler(async (req, res) => {
       avatar: user.avatar,
     },
   });
-});
+};
 
 // @desc    Login user
 // @route   POST /api/auth/login
-const login = asyncHandler(async (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400);
-    throw new Error('Please provide email and password');
+    return res.status(400).json({ success: false, message: 'Please provide email and password' });
   }
 
   const user = await User.findOne({ email }).select('+password');
   if (!user || !(await user.matchPassword(password))) {
-    res.status(401);
-    throw new Error('Invalid email or password');
+    return res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
 
   res.json({
@@ -63,20 +58,22 @@ const login = asyncHandler(async (req, res) => {
       avatar: user.avatar,
     },
   });
-});
+};
 
 // @desc    Get logged-in user profile
 // @route   GET /api/auth/me
-const getMe = asyncHandler(async (req, res) => {
+const getMe = async (req, res) => {
   const user = await User.findById(req.user._id);
   res.json({ success: true, user });
-});
+};
 
 // @desc    Update profile
 // @route   PUT /api/auth/profile
-const updateProfile = asyncHandler(async (req, res) => {
+const updateProfile = async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (!user) { res.status(404); throw new Error('User not found'); }
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
 
   const fields = ['name', 'branch', 'year', 'rollNumber', 'skills', 'education',
     'experience', 'linkedIn', 'github', 'portfolio', 'targetRole', 'targetSalary', 'avatar'];
@@ -87,6 +84,6 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   const updated = await user.save();
   res.json({ success: true, user: updated });
-});
+};
 
 module.exports = { register, login, getMe, updateProfile };

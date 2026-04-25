@@ -100,11 +100,10 @@ const applicationSchema = new mongoose.Schema(
 );
 
 // Add timeline event when status changes
-applicationSchema.pre('save', function (next) {
+applicationSchema.pre('save', function () {
   if (this.isModified('status') && !this.isNew) {
     this.timeline.push({ status: this.status, date: new Date() });
   }
-  next();
 });
 
 module.exports = mongoose.model('Application', applicationSchema);

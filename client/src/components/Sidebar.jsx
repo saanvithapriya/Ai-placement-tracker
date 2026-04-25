@@ -3,18 +3,20 @@ import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
 const studentLinks = [
-  { to: '/dashboard', icon: '⊞', label: 'Dashboard' },
-  { to: '/applications', icon: '📋', label: 'Applications' },
-  { to: '/ai', icon: '🤖', label: 'AI Assistant' },
-  { to: '/profile', icon: '👤', label: 'Profile' },
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/applications', label: 'Applications' },
+  { to: '/skills', label: 'Skill Tracker' },
+  { to: '/ai', label: 'AI Assistant' },
+  { to: '/profile', label: 'Profile' },
 ];
 
 const adminLinks = [
-  { to: '/dashboard', icon: '⊞', label: 'Dashboard' },
-  { to: '/admin', icon: '🏢', label: 'Admin Panel' },
-  { to: '/applications', icon: '📋', label: 'Applications' },
-  { to: '/ai', icon: '🤖', label: 'AI Assistant' },
-  { to: '/profile', icon: '👤', label: 'Profile' },
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/admin', label: 'Admin Panel' },
+  { to: '/applications', label: 'Applications' },
+  { to: '/skills', label: 'Skill Tracker' },
+  { to: '/ai', label: 'AI Assistant' },
+  { to: '/profile', label: 'Profile' },
 ];
 
 export default function Sidebar() {
@@ -27,9 +29,9 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div className="logo-icon">🎯</div>
+        <div className="logo-icon">T</div>
         <div>
-          <div className="logo-text">APT</div>
+          <div className="logo-text">TrackHire</div>
           <div className="logo-sub">AI Placement Tracker</div>
         </div>
       </div>
@@ -41,7 +43,6 @@ export default function Sidebar() {
             to={link.to}
             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
           >
-            <span className="sidebar-link-icon">{link.icon}</span>
             <span>{link.label}</span>
           </NavLink>
         ))}
@@ -54,10 +55,10 @@ export default function Sidebar() {
           </div>
           <div className="sidebar-user-info">
             <div className="sidebar-user-name">{user?.name}</div>
-            <div className="sidebar-user-role">{user?.role === 'admin' ? '🛡 Admin' : '🎓 Student'}</div>
+            <div className="sidebar-user-role">{user?.role === 'admin' ? 'Admin' : 'Student'}</div>
           </div>
         </div>
-        <button className="sidebar-logout" onClick={handleLogout} title="Logout">⏻</button>
+        <button className="sidebar-logout" onClick={handleLogout} title="Logout">Exit</button>
       </div>
     </aside>
   );

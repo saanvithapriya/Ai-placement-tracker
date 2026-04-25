@@ -9,6 +9,7 @@ export default function AuthPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'student' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const { login, register, user } = useAuth();
   const navigate = useNavigate();
 
@@ -29,7 +30,7 @@ export default function AuthPage() {
         navigate(u.role === 'admin' ? '/admin' : '/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      setError(err.response?.data?.message || err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -37,124 +38,71 @@ export default function AuthPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-bg">
-        <div className="auth-glow auth-glow-1" />
-        <div className="auth-glow auth-glow-2" />
-        <div className="auth-grid" />
-      </div>
+      <Link to="/" className="auth-back">Back to Home</Link>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <div className="auth-logo-mark">T</div>
+          <span className="auth-logo-text">TrackHire</span>
+        </div>
 
-      <div className="auth-container">
-        <Link to="/" className="auth-back">← Back to Home</Link>
+        <h1 className="auth-title">{isRegister ? 'Create your account' : 'Welcome back'}</h1>
+        <p className="auth-subtitle">
+          {isRegister ? 'Start tracking your placement journey with AI' : 'Sign in to continue your placement journey'}
+        </p>
 
-        <div className="auth-card">
-          <div className="auth-logo">
-            <span>🎯</span>
-            <span>APT</span>
+        {error && <div className="auth-error" id="auth-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          {isRegister && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="auth-name">Full Name</label>
+              <input id="auth-name" className="form-input" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Your full name" required autoFocus />
+            </div>
+          )}
+          <div className="form-group">
+            <label className="form-label" htmlFor="auth-email">Email Address</label>
+            <input id="auth-email" className="form-input" name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@example.com" required />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="auth-password">Password</label>
+            <div className="pw-wrap">
+              <input id="auth-password" className="form-input" name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Your password" required minLength={6} />
+              <button type="button" className="pw-toggle" onClick={() => setShowPw(!showPw)} aria-label="Toggle password">
+                {showPw ? '●' : '○'}
+              </button>
+            </div>
           </div>
 
-          <h1 className="auth-title">
-            {isRegister ? 'Create your account' : 'Welcome back'}
-          </h1>
-          <p className="auth-subtitle">
-            {isRegister
-              ? 'Start tracking your placement journey with AI'
-              : 'Sign in to continue your placement journey'
-            }
-          </p>
-
-          {error && <div className="auth-error" id="auth-error-msg">⚠️ {error}</div>}
-
-          <form onSubmit={handleSubmit} className="auth-form" id="auth-form">
-            {isRegister && (
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input
-                  id="auth-name"
-                  name="name"
-                  type="text"
-                  className="form-input"
-                  placeholder="John Doe"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            )}
-
+          {isRegister && (
             <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <input
-                id="auth-email"
-                name="email"
-                type="email"
-                className="form-input"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-                id="auth-password"
-                name="password"
-                type="password"
-                className="form-input"
-                placeholder={isRegister ? 'Min 6 characters' : 'Your password'}
-                value={form.password}
-                onChange={handleChange}
-                required
-                minLength={6}
-              />
-            </div>
-
-            {isRegister && (
-              <div className="form-group">
-                <label className="form-label">Role</label>
-                <div className="role-selector">
-                  {[
-                    { v: 'student', icon: '🎓', label: 'Student' },
-                    { v: 'admin', icon: '🛡', label: 'Admin (Placement Officer)' },
-                  ].map((r) => (
-                    <button
-                      key={r.v}
-                      type="button"
-                      id={`role-${r.v}`}
-                      className={`role-option ${form.role === r.v ? 'active' : ''}`}
-                      onClick={() => setForm({ ...form, role: r.v })}
-                    >
-                      <span>{r.icon}</span>
-                      <span>{r.label}</span>
-                    </button>
-                  ))}
-                </div>
+              <label className="form-label">Role</label>
+              <div className="role-grid">
+                {[
+                  { value: 'student', label: 'Student', desc: 'Track your applications' },
+                  { value: 'admin', label: 'Admin (Placement Officer)', desc: 'Manage company drives' },
+                ].map((r) => (
+                  <label key={r.value} className={`role-option ${form.role === r.value ? 'selected' : ''}`} id={`role-${r.value}`}>
+                    <input type="radio" name="role" value={r.value} checked={form.role === r.value} onChange={handleChange} style={{ display: 'none' }} />
+                    <div className="role-label">{r.label}</div>
+                    <div className="role-desc">{r.desc}</div>
+                  </label>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
-            <button
-              type="submit"
-              id="auth-submit-btn"
-              className="btn btn-primary"
-              disabled={loading}
-              style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}
-            >
-              {loading ? '⏳ Please wait...' : isRegister ? '🚀 Create Account' : '🔑 Sign In'}
-            </button>
-          </form>
+          <button id="auth-submit-btn" type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+            {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
+          </button>
+        </form>
 
-          <p className="auth-switch">
-            {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              id="auth-toggle-mode"
-              className="auth-switch-btn"
-              onClick={() => { setIsRegister(!isRegister); setError(''); }}
-            >
-              {isRegister ? 'Sign In' : 'Create Account'}
-            </button>
-          </p>
-        </div>
+        <p className="auth-switch">
+          {isRegister ? (
+            <>Already have an account? <button className="auth-switch-btn" onClick={() => setIsRegister(false)}>Sign In</button></>
+          ) : (
+            <>Don't have an account? <button className="auth-switch-btn" onClick={() => setIsRegister(true)}>Create Account</button></>
+          )}
+        </p>
       </div>
     </div>
   );

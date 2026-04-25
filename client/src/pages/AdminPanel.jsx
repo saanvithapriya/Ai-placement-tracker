@@ -110,7 +110,7 @@ export default function AdminPanel() {
     <div className="admin-page fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">🛡 Admin Panel</h1>
+          <h1 className="page-title">Admin Panel</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Placement officer dashboard — manage students, companies, and drives</p>
         </div>
       </div>
@@ -118,9 +118,9 @@ export default function AdminPanel() {
       {/* Tabs */}
       <div className="admin-tabs">
         {[
-          { id: 'overview', label: '📊 Overview' },
-          { id: 'students', label: '👥 Students' },
-          { id: 'companies', label: '🏢 Companies' },
+          { id: 'overview', label: 'Overview' },
+          { id: 'students', label: 'Students' },
+          { id: 'companies', label: 'Companies' },
         ].map((t) => (
           <button key={t.id} id={`admin-tab-${t.id}`} className={`admin-tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
             {t.label}
@@ -132,10 +132,10 @@ export default function AdminPanel() {
       {tab === 'overview' && (
         <div className="fade-up">
           <div className="grid-4" style={{ marginBottom: 28 }}>
-            <StatsCard icon="🎓" label="Total Students" value={stats?.totalStudents ?? 0} color="primary" />
-            <StatsCard icon="📋" label="Total Applications" value={stats?.totalApplications ?? 0} color="secondary" />
-            <StatsCard icon="🏆" label="Offers Given" value={stats?.totalOffers ?? 0} color="success" />
-            <StatsCard icon="📈" label="Placement Rate" value={`${stats?.placementRate ?? 0}%`} color="warning" />
+            <StatsCard icon="S" label="Total Students" value={stats?.totalStudents ?? 0} color="primary" />
+            <StatsCard icon="A" label="Total Applications" value={stats?.totalApplications ?? 0} color="secondary" />
+            <StatsCard icon="O" label="Offers Given" value={stats?.totalOffers ?? 0} color="success" />
+            <StatsCard icon="R" label="Placement Rate" value={`${stats?.placementRate ?? 0}%`} color="warning" />
           </div>
 
           <div className="grid-2">
@@ -147,11 +147,11 @@ export default function AdminPanel() {
                     <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} paddingAngle={3} dataKey="value">
                       {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#141628', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, color: '#f1f5f9' }} />
-                    <Legend formatter={(v) => <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>{v}</span>} />
+                    <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, color: '#0f172a' }} />
+                    <Legend formatter={(v) => <span style={{ color: '#475569', fontSize: '0.82rem' }}>{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : <div className="empty-state"><div className="empty-state-icon">📊</div><h3>No application data</h3></div>}
+              ) : <div className="empty-state"><h3>No application data</h3></div>}
             </div>
 
             <div className="card">
@@ -159,20 +159,20 @@ export default function AdminPanel() {
               {branchData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={branchData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                     <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} />
-                    <YAxis dataKey="branch" type="category" tick={{ fill: '#94a3b8', fontSize: 11 }} width={80} />
-                    <Tooltip contentStyle={{ background: '#141628', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, color: '#f1f5f9' }} />
+                    <YAxis dataKey="branch" type="category" tick={{ fill: '#475569', fontSize: 11 }} width={80} />
+                    <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, color: '#0f172a' }} />
                     <Bar dataKey="students" fill="#6366f1" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : <div className="empty-state"><div className="empty-state-icon">🏫</div><h3>No branch data</h3></div>}
+              ) : <div className="empty-state"><h3>No branch data</h3></div>}
             </div>
           </div>
 
           {stats?.topCompanies?.length > 0 && (
             <div className="card" style={{ marginTop: 24 }}>
-              <h2 className="card-title">🏆 Top Companies by Offers</h2>
+              <h2 className="card-title">Top Companies by Offers</h2>
               <div className="top-companies">
                 {stats.topCompanies.map((c, i) => (
                   <div key={c._id} className="top-company-row">
@@ -195,7 +195,7 @@ export default function AdminPanel() {
             <input
               id="admin-student-search"
               className="form-input"
-              placeholder="🔍 Search students..."
+              placeholder="Search students..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ maxWidth: 320 }}
@@ -248,7 +248,7 @@ export default function AdminPanel() {
           <div className="companies-grid">
             {companies.length === 0 && (
               <div className="empty-state card">
-                <div className="empty-state-icon">🏢</div>
+
                 <h3>No companies added</h3>
                 <p>Add your first company drive above</p>
               </div>
@@ -262,10 +262,10 @@ export default function AdminPanel() {
                 <div className="company-card-name">{c.name}</div>
                 <div className="company-card-industry">{c.industry || 'Industry N/A'}</div>
                 {c.packageRange?.max > 0 && (
-                  <div className="company-card-package">💰 {c.packageRange.min}–{c.packageRange.max} LPA</div>
+                  <div className="company-card-package">{c.packageRange.min} - {c.packageRange.max} LPA</div>
                 )}
                 {c.recruitmentDriveDate && (
-                  <div className="company-card-date">📅 {new Date(c.recruitmentDriveDate).toLocaleDateString()}</div>
+                  <div className="company-card-date">{new Date(c.recruitmentDriveDate).toLocaleDateString()}</div>
                 )}
                 <div className="company-card-roles">
                   {c.jobRoles?.slice(0, 3).map((r) => <span key={r} className="tag" style={{ fontSize: '0.72rem' }}>{r}</span>)}
@@ -285,7 +285,7 @@ export default function AdminPanel() {
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowCompanyModal(false)}>
           <div className="modal" style={{ maxWidth: 640 }} id="company-modal">
             <div className="modal-header">
-              <h2 className="modal-title">{editCompany ? '✏️ Edit Company' : '➕ Add Company Drive'}</h2>
+              <h2 className="modal-title">{editCompany ? 'Edit Company' : 'Add Company Drive'}</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowCompanyModal(false)}>✕</button>
             </div>
             <form onSubmit={handleCompanySave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -334,7 +334,7 @@ export default function AdminPanel() {
                 <input id="company-form-roles" className="form-input" value={Array.isArray(companyForm.jobRoles) ? companyForm.jobRoles.join(', ') : companyForm.jobRoles} onChange={(e) => setCompanyForm({ ...companyForm, jobRoles: e.target.value.split(',').map((r) => r.trim()).filter(Boolean) })} placeholder="SWE, SDE, Analyst" />
               </div>
               <button type="submit" id="company-form-submit" className="btn btn-primary" disabled={saving} style={{ justifyContent: 'center' }}>
-                {saving ? '⏳ Saving...' : editCompany ? '✅ Update Company' : '➕ Add Company'}
+                {saving ? 'Saving...' : editCompany ? 'Update Company' : 'Add Company'}
               </button>
             </form>
           </div>
