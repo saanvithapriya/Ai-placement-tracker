@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { getApplications, createApplication, updateApplication, deleteApplication, toggleStar } from '../api/applicationApi';
 import './Applications.css';
 
@@ -13,8 +14,17 @@ const STATUS_META = {
   Rejected:    { color: '#ef4444', light: '#fef2f2', border: '#fecaca', dot: '#dc2626' },
 };
 
+// Student-facing contextual messages per stage
+const STATUS_MESSAGE = {
+  Applied:     { icon: '📋', text: 'Your application is under review' },
+  Shortlisted: { icon: '🎉', text: 'You have been shortlisted!' },
+  Interview:   { icon: '📅', text: 'Interview scheduled — check your email' },
+  Offer:       { icon: '🏆', text: 'Congratulations! You received an offer' },
+  Rejected:    { icon: '😔', text: 'You were not selected this time' },
+};
+
 const EMPTY_FORM = {
-  company: '', role: '', status: 'Applied', location: '', package: '',
+  company: '', role: '', location: '', package: '',
   jobType: 'Full-time', jobUrl: '', notes: '',
   appliedDate: new Date().toISOString().split('T')[0], priority: 'Medium',
 };
@@ -22,6 +32,7 @@ const EMPTY_FORM = {
 export default function Applications() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const { onStatusUpdated } = useNotifications();
 
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState({});
@@ -33,25 +44,71 @@ export default function Applications() {
   const [filterStatus, setFilterStatus] = useState('');
   const [view, setView] = useState('kanban');
   const [saving, setSaving] = useState(false);
+  const [applyingId, setApplyingId] = useState(null); // drive being applied to
 
   const fetchApps = async () => {
     try {
-      const res = await getApplications({ search, status: filterStatus });
+      const res = await getApplications({ search });
       setApplications(res.data.applications || []);
       setStats(res.data.stats || {});
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchApps(); }, [search, filterStatus]);
+  // ── Real-time: patch application status when socket emits status:updated ───
+  useEffect(() => {
+    if (isAdmin) return; // admin doesn't need live status patches here
+    const unsubscribe = onStatusUpdated((payload) => {
+      setApplications((prev) =>
+        prev.map((app) =>
+          app._id === payload.driveId
+            ? {
+                ...app,
+                status:         payload.status,
+                shortlisted_at: payload.shortlisted_at,
+                interview_at:   payload.interview_at,
+                offer_at:       payload.offer_at,
+                rejected_at:    payload.rejected_at,
+              }
+            : app
+        )
+      );
+      // Recompute stats
+      setStats((prev) => {
+        const updated = { ...prev };
+        // Decrement old status, increment new (best-effort; full stats sync on next fetchApps)
+        return updated;
+      });
+    });
+    return unsubscribe; // clean up listener on unmount
+  }, [isAdmin, onStatusUpdated]);
 
+  useEffect(() => { fetchApps(); }, [search]);
+
+  // ── Student Apply ──────────────────────────────────────────────────────────
+  const handleApply = async (driveId) => {
+    setApplyingId(driveId);
+    try {
+      await createApplication({ driveId });
+      await fetchApps();
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        // already applied — just refresh
+        await fetchApps();
+      } else {
+        console.error(err);
+      }
+    } finally { setApplyingId(null); }
+  };
+
+  // ── Admin drive management ─────────────────────────────────────────────────
   const openCreate = () => { setEditApp(null); setForm(EMPTY_FORM); setShowModal(true); };
-  const openEdit = (app, e) => {
+  const openEdit   = (app, e) => {
     e?.stopPropagation();
     setEditApp(app);
     setForm({
       ...app,
-      package: app.package || '',
+      package:     app.package     || '',
       appliedDate: app.appliedDate ? app.appliedDate.split('T')[0] : new Date().toISOString().split('T')[0],
     });
     setShowModal(true);
@@ -62,7 +119,7 @@ export default function Applications() {
     setSaving(true);
     try {
       if (editApp) await updateApplication(editApp._id, form);
-      else await createApplication(form);
+      else         await createApplication(form); // admin creates a Drive
       setShowModal(false);
       fetchApps();
     } catch (err) { console.error(err); }
@@ -82,14 +139,21 @@ export default function Applications() {
     fetchApps();
   };
 
-  const handleStatusChange = async (id, status, e) => {
+  // Admin-only status quick-change from drive card (drive-level, not student-level)
+  const handleAdminStatusChange = async (id, status, e) => {
     e?.stopPropagation();
+    if (!isAdmin) return;
     await updateApplication(id, { status });
     fetchApps();
   };
 
-  const appsByStatus = (status) => applications.filter((a) => a.status === status);
-  const totalDrives = applications.length;
+  // Derive displayed list with client-side status filter
+  const displayed = filterStatus
+    ? applications.filter((a) => a.status === filterStatus)
+    : applications;
+
+  const appsByStatus = (status) => displayed.filter((a) => a.status === status);
+  const totalDrives  = displayed.length;
 
   if (loading) return <div className="loading-screen"><div className="loading-spinner" /></div>;
 
@@ -127,18 +191,14 @@ export default function Applications() {
       {/* ── Status Summary Bar ── */}
       <div className="app-summary-bar">
         {STATUSES.map((s) => {
-          const m = STATUS_META[s];
-          const count = stats[s.toLowerCase()] || 0;
+          const m       = STATUS_META[s];
+          const count   = stats[s.toLowerCase()] || 0;
           const isActive = filterStatus === s;
           return (
             <button
               key={s}
               className={`app-summary-chip ${isActive ? 'active' : ''}`}
-              style={{
-                '--chip-color': m.color,
-                '--chip-light': m.light,
-                '--chip-border': m.border,
-              }}
+              style={{ '--chip-color': m.color, '--chip-light': m.light, '--chip-border': m.border }}
               onClick={() => setFilterStatus(isActive ? '' : s)}
             >
               <span className="chip-dot" style={{ background: m.dot }} />
@@ -166,12 +226,48 @@ export default function Applications() {
       {/* ── Kanban ── */}
       {view === 'kanban' && (
         <div className="kanban-board">
+          {/* For students: show "Not Applied" column first */}
+          {!isAdmin && (() => {
+            const notApplied = applications.filter((a) => !a.applied);
+            if (filterStatus) return null; // hide when filtering by status
+            return notApplied.length > 0 ? (
+              <div className="kanban-col kanban-col--not-applied">
+                <div className="kanban-col-head">
+                  <div className="kanban-col-label">
+                    <span className="kanban-col-dot" style={{ background: '#94a3b8' }} />
+                    <span className="kanban-col-name" style={{ color: '#94a3b8' }}>Not Applied</span>
+                  </div>
+                  <span className="kanban-col-count" style={{ background: '#f8fafc', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                    {notApplied.length}
+                  </span>
+                </div>
+                <div className="kanban-cards-list">
+                  {notApplied.map((app) => (
+                    <DriveCard
+                      key={app._id}
+                      app={app}
+                      meta={STATUS_META.Applied}
+                      isAdmin={isAdmin}
+                      onStar={handleStar}
+                      onEdit={openEdit}
+                      onDelete={handleDelete}
+                      onApply={handleApply}
+                      applyingId={applyingId}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
+
           {STATUSES.map((status) => {
-            const cards = appsByStatus(status);
+            // For students: only show drives they've applied to in these columns
+            const cards = isAdmin
+              ? appsByStatus(status)
+              : displayed.filter((a) => a.applied && a.status === status);
             const m = STATUS_META[status];
             return (
               <div key={status} className="kanban-col">
-                {/* Column Header */}
                 <div className="kanban-col-head">
                   <div className="kanban-col-label">
                     <span className="kanban-col-dot" style={{ background: m.color }} />
@@ -181,8 +277,6 @@ export default function Applications() {
                     {cards.length}
                   </span>
                 </div>
-
-                {/* Cards */}
                 <div className="kanban-cards-list">
                   {cards.length === 0 ? (
                     <div className="kanban-empty-state">
@@ -206,7 +300,9 @@ export default function Applications() {
                         onStar={handleStar}
                         onEdit={openEdit}
                         onDelete={handleDelete}
-                        onStatusChange={handleStatusChange}
+                        onStatusChange={handleAdminStatusChange}
+                        onApply={handleApply}
+                        applyingId={applyingId}
                       />
                     ))
                   )}
@@ -220,12 +316,12 @@ export default function Applications() {
       {/* ── List View ── */}
       {view === 'list' && (
         <div className="app-list-wrap">
-          {applications.length === 0 ? (
+          {displayed.length === 0 ? (
             <div className="list-empty">No placement drives found.</div>
           ) : (
             <div className="app-list-cards">
-              {applications.map((app) => {
-                const m = STATUS_META[app.status] || STATUS_META.Applied;
+              {displayed.map((app) => {
+                const m = app.status ? (STATUS_META[app.status] || STATUS_META.Applied) : STATUS_META.Applied;
                 return (
                   <div key={app._id} className="list-card" id={`app-row-${app._id}`}>
                     <div className="list-card-left">
@@ -237,33 +333,49 @@ export default function Applications() {
                         <div className="list-role">{app.role}</div>
                         <div className="list-meta">
                           {app.location && <span className="ltag">{app.location}</span>}
-                          {app.package > 0 && <span className="ltag ltag--green">{app.package} LPA</span>}
+                          {app.package  > 0 && <span className="ltag ltag--green">{app.package} LPA</span>}
                           <span className="ltag">{app.jobType}</span>
                           {app.priority === 'High' && <span className="ltag ltag--red">High Priority</span>}
                         </div>
                       </div>
                     </div>
                     <div className="list-card-right">
-                      <span className="list-status-badge" style={{ background: m.light, color: m.color, border: `1px solid ${m.border}` }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: m.color, display: 'inline-block', marginRight: 5 }} />
-                        {app.status}
-                      </span>
-                      <div className="list-actions">
-                        <select
-                          className="list-status-select"
-                          value={app.status}
-                          onChange={(e) => handleStatusChange(app._id, e.target.value, e)}
-                          style={{ borderColor: m.border, color: m.color }}
-                        >
-                          {STATUSES.map((s) => <option key={s}>{s}</option>)}
-                        </select>
-                        {isAdmin && (
-                          <>
-                            <button className="icon-btn icon-btn--edit" onClick={(e) => openEdit(app, e)} title="Edit">✎</button>
-                            <button className="icon-btn icon-btn--del" onClick={(e) => handleDelete(app._id, e)} title="Delete">✕</button>
-                          </>
-                        )}
-                      </div>
+                      {/* Student: show status badge + contextual message, or Apply button */}
+                      {!isAdmin && (
+                        app.applied ? (
+                          <div className="student-status-info">
+                            <span className="list-status-badge" style={{ background: m.light, color: m.color, border: `1px solid ${m.border}` }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: m.color, display: 'inline-block', marginRight: 5 }} />
+                              {app.status}
+                            </span>
+                            {STATUS_MESSAGE[app.status] && (
+                              <span className="student-status-msg">
+                                {STATUS_MESSAGE[app.status].icon} {STATUS_MESSAGE[app.status].text}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            id={`apply-btn-${app._id}`}
+                            className="btn btn-primary btn-sm"
+                            disabled={applyingId === app._id}
+                            onClick={() => handleApply(app._id)}
+                          >
+                            {applyingId === app._id ? 'Applying…' : 'Apply'}
+                          </button>
+                        )
+                      )}
+
+                      {/* Admin actions */}
+                      {isAdmin && (
+                        <div className="list-actions">
+                          <span className="list-status-badge" style={{ background: m.light, color: m.color, border: `1px solid ${m.border}` }}>
+                            {app.status}
+                          </span>
+                          <button className="icon-btn icon-btn--edit" onClick={(e) => openEdit(app, e)} title="Edit">✎</button>
+                          <button className="icon-btn icon-btn--del"  onClick={(e) => handleDelete(app._id, e)} title="Delete">✕</button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -273,12 +385,12 @@ export default function Applications() {
         </div>
       )}
 
-      {/* ── Modal ── */}
-      {showModal && (
+      {/* ── Admin Drive Modal ── */}
+      {showModal && isAdmin && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal" id="application-modal">
             <div className="modal-header">
-              <h2 className="modal-title">{editApp ? 'Edit Drive' : isAdmin ? 'Add Placement Drive' : 'Update Status'}</h2>
+              <h2 className="modal-title">{editApp ? 'Edit Drive' : 'Add Placement Drive'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
             </div>
             <form onSubmit={handleSubmit} className="modal-form">
@@ -294,46 +406,40 @@ export default function Applications() {
               </div>
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select id="app-form-status" className="form-input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                    {STATUSES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
                   <label className="form-label">Job Type</label>
                   <select id="app-form-jobtype" className="form-input" value={form.jobType} onChange={(e) => setForm({ ...form, jobType: e.target.value })}>
                     {['Full-time', 'Internship', 'Part-time', 'Contract'].map((t) => <option key={t}>{t}</option>)}
                   </select>
                 </div>
-              </div>
-              <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Location</label>
                   <input id="app-form-location" className="form-input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Bangalore, India" />
                 </div>
+              </div>
+              <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Package (LPA)</label>
                   <input id="app-form-package" className="form-input" type="number" value={form.package} onChange={(e) => setForm({ ...form, package: e.target.value })} placeholder="12" />
                 </div>
-              </div>
-              <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Applied Date</label>
+                  <label className="form-label">Drive Date</label>
                   <input id="app-form-date" className="form-input" type="date" value={form.appliedDate} onChange={(e) => setForm({ ...form, appliedDate: e.target.value })} />
                 </div>
+              </div>
+              <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Priority</label>
                   <select id="app-form-priority" className="form-input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
                     {['Low', 'Medium', 'High'].map((p) => <option key={p}>{p}</option>)}
                   </select>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Job URL</label>
+                  <input id="app-form-url" className="form-input" value={form.jobUrl} onChange={(e) => setForm({ ...form, jobUrl: e.target.value })} placeholder="https://..." />
+                </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Job URL</label>
-                <input id="app-form-url" className="form-input" value={form.jobUrl} onChange={(e) => setForm({ ...form, jobUrl: e.target.value })} placeholder="https://..." />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Notes</label>
+                <label className="form-label">Notes / Eligibility</label>
                 <textarea id="app-form-notes" className="form-input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Eligibility, rounds info, contacts..." rows={3} />
               </div>
               <button type="submit" id="app-form-submit" className="btn btn-primary btn-full" disabled={saving}>
@@ -348,12 +454,13 @@ export default function Applications() {
 }
 
 /* ── Drive Card Component ── */
-function DriveCard({ app, meta: m, isAdmin, onStar, onEdit, onDelete, onStatusChange }) {
+function DriveCard({ app, meta: m, isAdmin, onStar, onEdit, onDelete, onStatusChange, onApply, applyingId }) {
   const [expanded, setExpanded] = useState(false);
+  const statusMsg = STATUS_MESSAGE[app.status];
+
   return (
     <div className={`drive-card ${expanded ? 'drive-card--open' : ''}`} id={`app-card-${app._id}`}>
-      {/* Accent strip */}
-      <div className="drive-card-strip" style={{ background: m.color }} />
+      <div className="drive-card-strip" style={{ background: app.applied || isAdmin ? m.color : '#94a3b8' }} />
 
       <div className="drive-card-body">
         {/* Top row */}
@@ -375,42 +482,79 @@ function DriveCard({ app, meta: m, isAdmin, onStar, onEdit, onDelete, onStatusCh
 
         {/* Tags row */}
         <div className="drive-tags">
-          {app.location && <span className="drive-tag">{app.location}</span>}
+          {app.location  && <span className="drive-tag">{app.location}</span>}
           {app.package > 0 && <span className="drive-tag drive-tag--green">₹{app.package} LPA</span>}
           <span className="drive-tag">{app.jobType}</span>
           {app.priority === 'High' && <span className="drive-tag drive-tag--red">High Priority</span>}
         </div>
 
-        {/* Status selector */}
-        <div className="drive-status-row">
-          <select
-            className="drive-status-select"
-            value={app.status}
-            onChange={(e) => { e.stopPropagation(); onStatusChange(app._id, e.target.value, e); }}
-            style={{ color: m.color, borderColor: m.border, background: m.light }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {['Applied', 'Shortlisted', 'Interview', 'Offer', 'Rejected'].map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+        {/* ── Student: Apply button OR status badge + contextual message ── */}
+        {!isAdmin && (
+          <div className="drive-student-action">
+            {app.applied ? (
+              <>
+                <span
+                  className="drive-status-badge-readonly"
+                  style={{ color: m.color, background: m.light, border: `1px solid ${m.border}` }}
+                >
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.color, display: 'inline-block', marginRight: 6 }} />
+                  {app.status}
+                </span>
+                {statusMsg && (
+                  <span className="drive-status-msg">
+                    {statusMsg.icon} {statusMsg.text}
+                  </span>
+                )}
+              </>
+            ) : (
+              <button
+                id={`apply-btn-card-${app._id}`}
+                className="btn btn-primary btn-sm drive-apply-btn"
+                disabled={applyingId === app._id}
+                onClick={(e) => { e.stopPropagation(); onApply(app._id); }}
+              >
+                {applyingId === app._id ? '⏳ Applying…' : '✓ Apply'}
+              </button>
+            )}
+          </div>
+        )}
 
-          {/* Expand / Info */}
-          <button
-            className="drive-expand-btn"
-            onClick={() => setExpanded(!expanded)}
-            title={expanded ? 'Less info' : 'More info'}
-          >
-            {expanded ? '▲' : '▼'}
-          </button>
+        {/* ── Admin: status row + expand + edit/delete ── */}
+        {isAdmin && (
+          <div className="drive-status-row">
+            <select
+              className="drive-status-select"
+              value={app.status}
+              onChange={(e) => { e.stopPropagation(); onStatusChange(app._id, e.target.value, e); }}
+              style={{ color: m.color, borderColor: m.border, background: m.light }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
 
-          {isAdmin && (
+            <button
+              className="drive-expand-btn"
+              onClick={() => setExpanded(!expanded)}
+              title={expanded ? 'Less info' : 'More info'}
+            >
+              {expanded ? '▲' : '▼'}
+            </button>
+
             <div className="drive-admin-actions">
               <button className="icon-btn icon-btn--edit" onClick={(e) => onEdit(app, e)} title="Edit">✎</button>
-              <button className="icon-btn icon-btn--del" onClick={(e) => onDelete(app._id, e)} title="Delete">✕</button>
+              <button className="icon-btn icon-btn--del"  onClick={(e) => onDelete(app._id, e)} title="Delete">✕</button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Student expand toggle */}
+        {!isAdmin && app.applied && (
+          <div className="drive-status-row">
+            <button className="drive-expand-btn" onClick={() => setExpanded(!expanded)}>
+              {expanded ? '▲' : '▼'}
+            </button>
+          </div>
+        )}
 
         {/* Expanded notes */}
         {expanded && app.notes && (

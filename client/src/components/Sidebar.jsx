@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 import './Sidebar.css';
 
 const studentLinks = [
@@ -47,6 +48,10 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="sidebar-notif-row">
+        <NotificationBell />
+      </div>
 
       <div className="sidebar-footer">
         <div className="sidebar-user">

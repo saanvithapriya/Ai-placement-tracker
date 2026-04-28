@@ -1,10 +1,25 @@
 import { useState, useEffect } from 'react';
-import { getAdminStats, getStudents, getCompanies, createCompany, updateCompany, deleteCompany } from '../api/adminApi';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  getAdminStats, getStudents, getCompanies, createCompany, updateCompany, deleteCompany,
+  getDrives, getDriveApplicants, updateApplicantStatus,
+} from '../api/adminApi';
+import { showToast } from '../components/Toast';
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
 import StatsCard from '../components/StatsCard';
 import './AdminPanel.css';
 
-const STATUS_COLORS = { Applied: '#3b82f6', Shortlisted: '#8b5cf6', Interview: '#f59e0b', Offer: '#10b981', Rejected: '#ef4444' };
+const STATUS_COLORS = {
+  Applied: '#3b82f6', Shortlisted: '#8b5cf6',
+  Interview: '#f59e0b', Offer: '#10b981', Rejected: '#ef4444',
+};
+
+const STATUS_BADGE = {
+  Applied: 'applied', Shortlisted: 'shortlisted',
+  Interview: 'interview', Offer: 'offer', Rejected: 'rejected',
+};
 
 const COMPANY_EMPTY = {
   name: '', industry: '', location: '', website: '', description: '',
@@ -18,6 +33,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState(null);
   const [students, setStudents] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [drives, setDrives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editCompany, setEditCompany] = useState(null);
@@ -25,17 +41,31 @@ export default function AdminPanel() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
 
+  // Drive applicants modal
+  const [selectedDrive, setSelectedDrive] = useState(null);
+  const [applicants, setApplicants] = useState([]);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [showApplicantsModal, setShowApplicantsModal] = useState(false);
+  const [applicantSearch, setApplicantSearch] = useState('');
+  const [applicantStatusFilter, setApplicantStatusFilter] = useState('All');
+  const [pendingUserId, setPendingUserId] = useState(null); // which row is mid-transition
+
+  // Confirmation modal for critical actions (Offer / Reject)
+  const [confirmPending, setConfirmPending] = useState(null); // { userId, newStatus, studentName }
+
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [sRes, stRes, cRes] = await Promise.all([
+        const [sRes, stRes, cRes, dRes] = await Promise.all([
           getAdminStats(),
           getStudents(),
           getCompanies(),
+          getDrives(),
         ]);
         setStats(sRes.data.stats);
         setStudents(stRes.data.students);
         setCompanies(cRes.data.companies);
+        setDrives(dRes.data.drives);
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     };
@@ -99,10 +129,65 @@ export default function AdminPanel() {
     setCompanies(companies.filter((c) => c._id !== id));
   };
 
+  const openDriveApplicants = async (drive) => {
+    setSelectedDrive(drive);
+    setApplicants([]);
+    setApplicantSearch('');
+    setApplicantStatusFilter('All');
+    setLoadingApplicants(true);
+    setShowApplicantsModal(true);
+    try {
+      const res = await getDriveApplicants(drive._id);
+      setApplicants(res.data.applicants);
+    } catch (err) { console.error(err); }
+    finally { setLoadingApplicants(false); }
+  };
+
+  // Entry point: Offer/Reject → show confirm modal; others → execute directly
+  const requestAdvanceStatus = (userId, newStatus, studentName) => {
+    if (['Offer', 'Rejected'].includes(newStatus)) {
+      setConfirmPending({ userId, newStatus, studentName });
+    } else {
+      handleAdvanceStatus(userId, newStatus);
+    }
+  };
+
+  // Advance a student's status via the state machine (admin action)
+  const handleAdvanceStatus = async (userId, newStatus) => {
+    if (!selectedDrive || pendingUserId) return;
+    setConfirmPending(null);
+    setPendingUserId(userId);
+    try {
+      await updateApplicantStatus(selectedDrive._id, userId, newStatus);
+      const res = await getDriveApplicants(selectedDrive._id);
+      setApplicants(res.data.applicants);
+      const dRes = await getDrives();
+      setDrives(dRes.data.drives);
+      showToast(`Student moved to ${newStatus}`, 'success');
+    } catch (err) {
+      console.error(err);
+      const msg = err?.response?.data?.message || 'Action failed. Please try again.';
+      showToast(msg, 'error');
+      const res = await getDriveApplicants(selectedDrive._id);
+      setApplicants(res.data.applicants);
+    } finally {
+      setPendingUserId(null);
+    }
+  };
+
   const filteredStudents = students.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const filteredApplicants = applicants.filter((a) => {
+    const matchSearch =
+      a.name.toLowerCase().includes(applicantSearch.toLowerCase()) ||
+      a.email.toLowerCase().includes(applicantSearch.toLowerCase()) ||
+      (a.rollNumber || '').toLowerCase().includes(applicantSearch.toLowerCase());
+    const matchStatus = applicantStatusFilter === 'All' || a.status === applicantStatusFilter;
+    return matchSearch && matchStatus;
+  });
 
   if (loading) return <div className="loading-screen"><div className="loading-spinner" /></div>;
 
@@ -111,7 +196,9 @@ export default function AdminPanel() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Admin Panel</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Placement officer dashboard — manage students, companies, and drives</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            Placement officer dashboard — manage students, companies, and drives
+          </p>
         </div>
       </div>
 
@@ -121,8 +208,14 @@ export default function AdminPanel() {
           { id: 'overview', label: 'Overview' },
           { id: 'students', label: 'Students' },
           { id: 'companies', label: 'Companies' },
+          { id: 'drives', label: `Drives & Applicants ${drives.length > 0 ? `(${drives.length})` : ''}` },
         ].map((t) => (
-          <button key={t.id} id={`admin-tab-${t.id}`} className={`admin-tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            id={`admin-tab-${t.id}`}
+            className={`admin-tab ${tab === t.id ? 'active' : ''}`}
+            onClick={() => setTab(t.id)}
+          >
             {t.label}
           </button>
         ))}
@@ -248,7 +341,6 @@ export default function AdminPanel() {
           <div className="companies-grid">
             {companies.length === 0 && (
               <div className="empty-state card">
-
                 <h3>No companies added</h3>
                 <p>Add your first company drive above</p>
               </div>
@@ -280,6 +372,73 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* Drives & Applicants */}
+      {tab === 'drives' && (
+        <div className="fade-up">
+          {drives.length === 0 ? (
+            <div className="empty-state card">
+              <h3>No placement drives found</h3>
+              <p>Create a drive from the Applications page or the Companies tab</p>
+            </div>
+          ) : (
+            <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Company / Role</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Drive Date</th>
+                    <th>Package</th>
+                    <th>Applicants</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drives.map((d) => (
+                    <tr key={d._id} id={`drive-row-${d._id}`}>
+                      <td>
+                        <div className="admin-student-cell">
+                          <div className="admin-student-avatar" style={{ borderRadius: 8 }}>{d.company?.[0] || '?'}</div>
+                          <div>
+                            <div className="admin-student-name">{d.company}</div>
+                            <div className="admin-student-email">{d.role}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="tag" style={{ fontSize: '0.72rem' }}>{d.jobType || 'Full-time'}</span>
+                      </td>
+                      <td>
+                        <span className={`badge badge-${STATUS_BADGE[d.status] || 'applied'}`}>{d.status}</span>
+                      </td>
+                      <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        {d.driveDate ? new Date(d.driveDate).toLocaleDateString() : '—'}
+                      </td>
+                      <td style={{ fontSize: '0.82rem', color: 'var(--success)', fontWeight: 600 }}>
+                        {d.package > 0 ? `${d.package} LPA` : '—'}
+                      </td>
+                      <td>
+                        <span className="drive-applicant-count">{d.applicantCount}</span>
+                      </td>
+                      <td>
+                        <button
+                          id={`view-applicants-${d._id}`}
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => openDriveApplicants(d)}
+                        >
+                          View Applicants
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Company Modal */}
       {showCompanyModal && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowCompanyModal(false)}>
@@ -305,7 +464,7 @@ export default function AdminPanel() {
                 <div className="form-group">
                   <label className="form-label">Status</label>
                   <select id="company-form-status" className="form-input" value={companyForm.status} onChange={(e) => setCompanyForm({ ...companyForm, status: e.target.value })}>
-                    {['Upcoming','Active','Closed'].map((s) => <option key={s}>{s}</option>)}
+                    {['Upcoming', 'Active', 'Closed'].map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
@@ -340,6 +499,224 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+
+      {/* Drive Applicants Modal */}
+      {showApplicantsModal && selectedDrive && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowApplicantsModal(false)}>
+          <div className="modal modal-wide" id="drive-applicants-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">
+                  {selectedDrive.company} — {selectedDrive.role}
+                </h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: 4 }}>
+                  {loadingApplicants ? 'Loading…' : `${applicants.length} student${applicants.length !== 1 ? 's' : ''} applied`}
+                </p>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowApplicantsModal(false)}>✕</button>
+            </div>
+
+            {/* Filters */}
+            <div className="drive-modal-filters">
+              <input
+                id="applicant-search"
+                className="form-input"
+                placeholder="Search by name, email, roll no…"
+                value={applicantSearch}
+                onChange={(e) => setApplicantSearch(e.target.value)}
+                style={{ flex: 1, minWidth: 200 }}
+              />
+              <select
+                id="applicant-status-filter"
+                className="form-input"
+                value={applicantStatusFilter}
+                onChange={(e) => setApplicantStatusFilter(e.target.value)}
+                style={{ width: 160 }}
+              >
+                {['All', 'Applied', 'Shortlisted', 'Interview', 'Offer', 'Rejected'].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status summary pills */}
+            {!loadingApplicants && applicants.length > 0 && (
+              <div className="drive-status-summary">
+                {['Applied', 'Shortlisted', 'Interview', 'Offer', 'Rejected'].map((s) => {
+                  const cnt = applicants.filter((a) => a.status === s).length;
+                  if (cnt === 0) return null;
+                  return (
+                    <span
+                      key={s}
+                      className={`badge badge-${STATUS_BADGE[s]}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setApplicantStatusFilter(applicantStatusFilter === s ? 'All' : s)}
+                    >
+                      {s}: {cnt}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {loadingApplicants ? (
+              <div style={{ textAlign: 'center', padding: 40 }}><div className="loading-spinner" /></div>
+            ) : filteredApplicants.length === 0 ? (
+              <div className="empty-state" style={{ padding: '40px 0' }}>
+                <h3>{applicants.length === 0 ? 'No students have applied yet' : 'No results match your filters'}</h3>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="admin-table" id="applicants-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Student</th>
+                      <th>Roll No.</th>
+                      <th>Branch</th>
+                      <th>Year</th>
+                      <th>Status</th>
+                      <th>Stage Date</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredApplicants.map((a, idx) => {
+                      // Determine which stage timestamp to display
+                      const stageTs =
+                        a.status === 'Shortlisted' ? a.shortlisted_at
+                        : a.status === 'Interview'   ? a.interview_at
+                        : a.status === 'Offer'       ? a.offer_at
+                        : a.status === 'Rejected'    ? a.rejected_at
+                        : a.applied_at;
+
+                      // Next-action buttons based on current status
+                      const actionButtons = {
+                        Applied:     [{ label: '✓ Shortlist',      next: 'Shortlisted', cls: 'btn-shortlist' }],
+                        Shortlisted: [{ label: '→ Interview',      next: 'Interview',   cls: 'btn-interview' }],
+                        Interview:   [
+                          { label: '🎉 Offer',   next: 'Offer',    cls: 'btn-offer'  },
+                          { label: '✕ Reject',  next: 'Rejected', cls: 'btn-reject' },
+                        ],
+                        Offer:    [],
+                        Rejected: [],
+                      }[a.status] || [];
+
+                      return (
+                        <tr
+                          key={String(a.userId)}
+                          id={`applicant-row-${String(a.userId)}`}
+                          className={pendingUserId === String(a.userId) ? 'applicant-row-pending' : ''}
+                        >
+                          <td style={{ color: 'var(--text-muted)', fontWeight: 700, width: 40 }}>{idx + 1}</td>
+                          <td>
+                            <div className="admin-student-cell">
+                              <div className="admin-student-avatar">{a.name[0]}</div>
+                              <div>
+                                <div className="admin-student-name">{a.name}</div>
+                                <div className="admin-student-email">{a.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{a.rollNumber || '—'}</td>
+                          <td style={{ fontSize: '0.82rem' }}>{a.branch || '—'}</td>
+                          <td style={{ fontSize: '0.82rem' }}>{a.year ? `Year ${a.year}` : '—'}</td>
+                          <td>
+                            <span className={`badge badge-${STATUS_BADGE[a.status] || 'applied'}`}>{a.status}</span>
+                          </td>
+                          <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            {stageTs ? new Date(stageTs).toLocaleDateString() : '—'}
+                          </td>
+                          <td>
+                            <div className="applicant-action-btns">
+                              {pendingUserId === String(a.userId) ? (
+                                <span className="applicant-row-spinner">⏳ Updating…</span>
+                              ) : actionButtons.length === 0 ? (
+                                <span className="terminal-badge">Terminal</span>
+                              ) : (
+                                actionButtons.map(({ label, next, cls }) => (
+                                  <button
+                                    key={next}
+                                    id={`advance-${String(a.userId)}-${next}`}
+                                    className={`btn btn-sm applicant-action-btn ${cls}`}
+                                    disabled={!!pendingUserId}
+                                    onClick={() => requestAdvanceStatus(String(a.userId), next, a.name)}
+                                  >
+                                    {label}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmation Modal (Offer / Reject) ── */}
+      {confirmPending && (
+        <ConfirmModal
+          studentName={confirmPending.studentName}
+          newStatus={confirmPending.newStatus}
+          onConfirm={() => handleAdvanceStatus(confirmPending.userId, confirmPending.newStatus)}
+          onCancel={() => setConfirmPending(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Confirm Modal Component ── */
+function ConfirmModal({ studentName, newStatus, onConfirm, onCancel }) {
+  const isOffer    = newStatus === 'Offer';
+  const accentColor = isOffer ? '#10b981' : '#ef4444';
+  const icon        = isOffer ? '🏆' : '❌';
+
+  return (
+    <div
+      className="modal-overlay"
+      id="confirm-modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div className="confirm-modal" id="confirm-modal">
+        <div className="confirm-modal-icon" style={{ background: isOffer ? '#ecfdf5' : '#fef2f2' }}>
+          <span style={{ fontSize: '2rem' }}>{icon}</span>
+        </div>
+        <h3 className="confirm-modal-title" style={{ color: accentColor }}>
+          Confirm {newStatus}
+        </h3>
+        <p className="confirm-modal-body">
+          You are about to mark <strong>{studentName}</strong> as{' '}
+          <strong style={{ color: accentColor }}>{newStatus}</strong>.
+          {newStatus === 'Rejected'
+            ? ' This will notify the student that they have not been selected.'
+            : ' This will notify the student with a congratulatory message.'}
+        </p>
+        <p className="confirm-modal-warning">This action cannot be undone.</p>
+        <div className="confirm-modal-actions">
+          <button
+            id="confirm-modal-cancel"
+            className="btn btn-ghost"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            id="confirm-modal-proceed"
+            className="btn"
+            style={{ background: accentColor, color: 'white', border: 'none' }}
+            onClick={onConfirm}
+          >
+            Confirm {newStatus}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

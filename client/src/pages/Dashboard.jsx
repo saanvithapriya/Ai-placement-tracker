@@ -28,17 +28,21 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [appRes, insightRes] = await Promise.all([
-          getApplications({ sort: '-createdAt' }),
-          getCareerInsights(user?.skills || [], user?.targetRole || ''),
-        ]);
-        setApplications(appRes.data.applications);
-        setStats(appRes.data.stats);
-        setInsights(insightRes.data.result);
+        const appRes = await getApplications({ sort: '-createdAt' });
+        setApplications(appRes.data.applications || []);
+        setStats(appRes.data.stats || {});
       } catch (err) {
-        console.error(err);
+        console.error('Dashboard fetch error:', err);
       } finally {
         setLoading(false);
+      }
+      // AI insights are optional — never block the dashboard
+      try {
+        const insightRes = await getCareerInsights(user?.skills || [], user?.targetRole || '');
+        setInsights(insightRes.data.result);
+      } catch (_) {
+        // Silently ignore AI failures (missing key, quota, etc.)
+        setInsights(null);
       }
     };
     fetchAll();
@@ -171,7 +175,7 @@ export default function Dashboard() {
                     <div className="recent-company">{app.company}</div>
                     <div className="recent-role">{app.role}</div>
                   </div>
-                  <span className={`badge badge-${app.status.toLowerCase()}`}>{app.status}</span>
+                  <span className={`badge badge-${(app.status || 'applied').toLowerCase()}`}>{app.status || 'Applied'}</span>
                 </div>
               ))}
             </div>
@@ -204,7 +208,10 @@ export default function Dashboard() {
               </Link>
             </div>
           ) : (
-            <div className="loading-spinner" style={{ width: 28, height: 28, borderWidth: 2 }} />
+            <div className="empty-state">
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>AI insights unavailable.</p>
+              <Link to="/ai" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>Open AI Assistant &rarr;</Link>
+            </div>
           )}
         </div>
       </div>

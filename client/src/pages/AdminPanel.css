@@ -125,3 +125,198 @@
 .company-card-date     { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; }
 .company-card-roles    { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
 .company-card-actions  { display: flex; gap: 8px; }
+
+/* ── Drives tab ── */
+.drive-applicant-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+}
+
+/* ── Wide modal (drive applicants) ── */
+.modal-wide {
+  max-width: 860px !important;
+  width: 90vw;
+}
+
+.drive-modal-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.drive-status-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Badge variants */
+.badge-shortlisted { background: rgba(139,92,246,0.12); color: #7c3aed; }
+.badge-interview   { background: rgba(245,158,11,0.12); color: #d97706; }
+.badge-offer       { background: rgba(16,185,129,0.12); color: #059669; }
+.badge-rejected    { background: rgba(239,68,68,0.12);  color: #dc2626; }
+.badge-applied     { background: rgba(59,130,246,0.12); color: #2563eb; }
+
+/* ── Applicant action buttons ── */
+.applicant-action-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.applicant-action-btn {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.applicant-action-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
+.applicant-action-btn:active { transform: translateY(0); }
+
+.btn-shortlist { background: rgba(139,92,246,0.15); color: #7c3aed; border: 1px solid rgba(139,92,246,0.3); }
+.btn-shortlist:hover { background: rgba(139,92,246,0.25); }
+
+.btn-interview { background: rgba(245,158,11,0.15); color: #d97706; border: 1px solid rgba(245,158,11,0.3); }
+.btn-interview:hover { background: rgba(245,158,11,0.25); }
+
+.btn-offer  { background: rgba(16,185,129,0.15); color: #059669; border: 1px solid rgba(16,185,129,0.3); }
+.btn-offer:hover { background: rgba(16,185,129,0.25); }
+
+.btn-reject { background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.25); }
+.btn-reject:hover { background: rgba(239,68,68,0.22); }
+
+.terminal-badge {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-style: italic;
+}
+
+/* Row highlighted while a status transition is in progress */
+.applicant-row-pending {
+  background: rgba(99, 102, 241, 0.04);
+  opacity: 0.8;
+}
+
+.applicant-row-spinner {
+  font-size: 0.72rem;
+  color: var(--primary);
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* ── Read-only status badge on Kanban cards (student view) ── */
+.drive-status-badge-readonly {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+/* ══════════════════════════════════════════════
+   Confirmation Modal (Offer / Reject)
+   ══════════════════════════════════════════════ */
+.confirm-modal {
+  background: white;
+  border-radius: var(--radius-xl, 20px);
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  margin: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  animation: modal-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-pop {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.confirm-modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.confirm-modal-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.confirm-modal-body {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.confirm-modal-warning {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.confirm-modal-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Ghost button utility */
+.btn-ghost {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-base);
+}
+.btn-ghost:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}

@@ -1,12 +1,18 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
+const express    = require('express');
+const http       = require('http');
+const mongoose   = require('mongoose');
+const cors       = require('cors');
+const dotenv     = require('dotenv');
+const path       = require('path');
+const { initSocket } = require('./socket');
 
 dotenv.config();
 
-const app = express();
+const app    = express();
+const server = http.createServer(app); // HTTP server needed for Socket.io
+
+// ── Socket.io ────────────────────────────────────────────────────────────────
+initSocket(server);
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
@@ -22,6 +28,7 @@ app.use('/api/applications', require('./routes/applications'));
 app.use('/api/skills', require('./routes/skills'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'APT Server is running 🚀' }));
@@ -36,8 +43,9 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected locally');
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {         // listen on http.Server, not app
       console.log(`🚀 Server running at http://localhost:${PORT}`);
+      console.log(`🔌 Socket.io ready`);
     });
   })
   .catch((err) => {

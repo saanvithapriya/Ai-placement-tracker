@@ -169,3 +169,9 @@
   color: var(--danger);
   background: rgba(239, 68, 68, 0.1);
 }
+
+/* Notification bell row */
+.sidebar-notif-row {
+  padding: 0 0 12px;
+  position: relative;
+}

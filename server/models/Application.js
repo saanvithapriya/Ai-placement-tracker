@@ -8,10 +8,16 @@ const timelineEventSchema = new mongoose.Schema({
 
 // Per-student status entry for admin-created drives
 const studentStatusSchema = new mongoose.Schema({
-  user:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  status:    { type: String, enum: ['Applied', 'Shortlisted', 'Interview', 'Offer', 'Rejected'], default: 'Applied' },
-  starred:   { type: Boolean, default: false },
-  updatedAt: { type: Date, default: Date.now },
+  user:           { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  status:         { type: String, enum: ['Applied', 'Shortlisted', 'Interview', 'Offer', 'Rejected'], default: 'Applied' },
+  starred:        { type: Boolean, default: false },
+  updatedAt:      { type: Date, default: Date.now },
+  // Stage timestamps — set once by admin action, never overwritten
+  applied_at:     { type: Date, default: Date.now },
+  shortlisted_at: { type: Date, default: null },
+  interview_at:   { type: Date, default: null },
+  offer_at:       { type: Date, default: null },
+  rejected_at:    { type: Date, default: null },
 });
 
 const applicationSchema = new mongoose.Schema(
@@ -68,6 +74,8 @@ const applicationSchema = new mongoose.Schema(
     eligibilityCgpa:   { type: Number, default: 0 },
     eligibilityBranch: { type: [String], default: [] },
     driveDate:         { type: Date },
+    // Drive archival — set isActive: false to close a drive without deleting it
+    isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true }
 );
